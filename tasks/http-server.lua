@@ -12,6 +12,7 @@ local sched = require 'sched'
 local selector = require 'tasks/selector'
 local http_util = require 'tasks/http-server/http-util'
 local stream = require 'stream'
+local json = require 'lib/dkjson'
 
 local function backup_response(code_out, header_out)
 	local httpstatus = tostring(code_out).." "..http_util.http_error_code[code_out]
@@ -237,9 +238,13 @@ M.init = function(conf)
 				-- read body ------------------------------------------------------------
 				local http_params
 				if http_req_method=='POST' then 
-					local data = instream:read( http_req_header['content-length'] or 0 )
+					local data = instream:read( tonumber(http_req_header['content-length']) or 0 )
 					if not data then sktd_cli:close(); return end
-					http_params=parse_params(data)
+					if(http_req_header['content-type']=='application/json') then
+						http_params=json.decode(data)
+					else
+						http_params=parse_params(data)
+					end
 				else
 					http_params=parse_params(http_req_params)
 				end
